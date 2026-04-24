@@ -13,7 +13,6 @@ const defaultConfig: AppConfig = {
     return d.toISOString().split('T')[0]
   })(),
   columnWidthPx: 48,
-  visibleColumnsBuffer: 2,
   bookingHeaderBackground: "#e8f4fc"
 }
 

@@ -3,15 +3,12 @@ import { Booking, BookingStatus } from "@/types";
 import { useAppContext } from "@/context/AppContext";
 import styles from "./RoomRow.module.css";
 
-const COLUMN_WIDTH_PX = 48;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 interface RoomRowProps {
   rowId: string;
   rowName: string;
   bookings: Booking[];
-  visibleStartIndex: number;
-  visibleEndIndex: number;
   totalDays: number;
   onBookingClick: (booking: Booking) => void;
 }
@@ -34,37 +31,32 @@ export function RoomRow({
   rowId,
   rowName,
   bookings,
-  visibleStartIndex,
-  visibleEndIndex,
   totalDays,
   onBookingClick,
 }: RoomRowProps) {
   console.log('render', rowId)
   const { config } = useAppContext();
-  const visibleColumnCount = Math.max(
-    0,
-    Math.min(totalDays - visibleStartIndex, visibleEndIndex - visibleStartIndex + 1),
-  );
-  const clampedVisibleEndIndex = Math.min(visibleEndIndex, totalDays - 1);
 
   const getBookingStatus = (status: BookingStatus): string => {
     return STATUS_COLORS[status] ?? "#ccc";
   };
 
-  const visibleDayIndices = useMemo(
+  const dayIndices = useMemo(
     () =>
-      Array.from({ length: visibleColumnCount }, (_, index) => {
-        return visibleStartIndex + index;
+      Array.from({ length: totalDays }, (_, index) => {
+        return index;
       }),
-    [visibleColumnCount, visibleStartIndex],
+    [totalDays],
   );
 
-  const visibleBookings = useMemo(() => {
+  const renderableBookings = useMemo(() => {
+    const lastDayIndex = totalDays - 1;
+
     return bookings
       .filter((b) => {
         const startDay = getDayOffset(b.checkIn, config.dateRangeStart);
         const endDay = getDayOffset(b.checkOut, config.dateRangeStart);
-        return endDay >= visibleStartIndex && startDay <= clampedVisibleEndIndex;
+        return endDay >= 0 && startDay <= lastDayIndex;
       })
       .map((b) => {
         const startDay = getDayOffset(b.checkIn, config.dateRangeStart);
@@ -74,14 +66,13 @@ export function RoomRow({
       });
   }, [
     bookings,
-    clampedVisibleEndIndex,
     config.dateRangeStart,
-    visibleStartIndex,
+    totalDays,
   ]);
 
   const calendarGridTemplate =
-    visibleColumnCount > 0
-      ? `repeat(${visibleColumnCount}, ${COLUMN_WIDTH_PX}px)`
+    totalDays > 0
+      ? `repeat(${totalDays}, ${config.columnWidthPx}px)`
       : "none";
 
   return (
@@ -93,10 +84,10 @@ export function RoomRow({
           className={styles.calendarGrid}
           style={{
             gridTemplateColumns: calendarGridTemplate,
-            width: visibleColumnCount * COLUMN_WIDTH_PX,
+            width: totalDays * config.columnWidthPx,
           }}
         >
-          {visibleDayIndices.map((dayIndex, columnIndex) => (
+          {dayIndices.map((dayIndex, columnIndex) => (
             <div
               key={dayIndex}
               className={styles.dayCell}
@@ -104,13 +95,9 @@ export function RoomRow({
             />
           ))}
 
-          {visibleBookings.map(({ booking, startDay, endDay, color }) => {
-            const startColumn =
-              Math.max(startDay, visibleStartIndex) - visibleStartIndex + 1;
-            const span =
-              Math.min(endDay, clampedVisibleEndIndex) -
-              Math.max(startDay, visibleStartIndex) +
-              1;
+          {renderableBookings.map(({ booking, startDay, endDay, color }) => {
+            const startColumn = Math.max(startDay, 0) + 1;
+            const span = Math.min(endDay, totalDays - 1) - Math.max(startDay, 0) + 1;
 
             if (span <= 0) return null;
 

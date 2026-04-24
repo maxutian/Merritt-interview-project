@@ -1,10 +1,8 @@
 import React from 'react'
 import { Booking, RoomUnit } from '@/types'
-import { useVisibleRange } from '@/hooks/useVisibleRange'
+import { useAppContext } from '@/context/AppContext'
 import { RoomRow } from './RoomRow'
-import {useAppContext} from "@/context/AppContext";
 
-const COLUMN_WIDTH_PX = 48
 const TOTAL_DAYS = 30
 
 interface BookingGridProps {
@@ -22,11 +20,8 @@ function getDayLabels(startDate: string, totalDays: number): string[] {
 }
 
 export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGridProps) {
-  const { visibleRange, handleScroll } = useVisibleRange()
   const { config } = useAppContext()
-
-  const startDate = new Date().toISOString().split('T')[0]
-  const dayLabels = getDayLabels(startDate, TOTAL_DAYS)
+  const dayLabels = getDayLabels(config.dateRangeStart, TOTAL_DAYS)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -43,15 +38,13 @@ export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGrid
             background: config.bookingHeaderBackground
           }}
         >
-          {Array.from({ length: visibleRange.endIndex - visibleRange.startIndex + 1 }, (_, i) => {
-            const dayIndex = visibleRange.startIndex + i
-            if (dayIndex >= TOTAL_DAYS) return null
+          {Array.from({ length: TOTAL_DAYS }, (_, dayIndex) => {
             return (
               <div
                 key={dayIndex}
                 style={{
-                  width: COLUMN_WIDTH_PX,
-                  minWidth: COLUMN_WIDTH_PX,
+                  width: config.columnWidthPx,
+                  minWidth: config.columnWidthPx,
                   padding: '8px 4px',
                   fontSize: 11,
                   textAlign: 'center',
@@ -69,9 +62,8 @@ export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGrid
       {/* Scrollable grid body */}
       <div
         style={{ flex: 1, overflowX: 'auto', overflowY: 'auto' }}
-        onScroll={handleScroll}
       >
-        <div style={{ minWidth: TOTAL_DAYS * COLUMN_WIDTH_PX + 140 }}>
+        <div style={{ minWidth: TOTAL_DAYS * config.columnWidthPx + 140 }}>
           {roomUnits.map(room => {
             const roomBookings = bookings.filter(
               b => b.roomUnit.roomId === room.id
@@ -82,8 +74,6 @@ export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGrid
                 rowId={room.id}
                 rowName={room.name}
                 bookings={roomBookings}
-                visibleStartIndex={visibleRange.startIndex}
-                visibleEndIndex={visibleRange.endIndex}
                 totalDays={TOTAL_DAYS}
                 onBookingClick={onBookingClick}
               />
