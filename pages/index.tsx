@@ -14,6 +14,9 @@ const BookingsPage: NextPage = () => {
   const handleBookingClick = useCallback((booking: Booking) => {
     setSelectedBooking(booking)
   }, [])
+  const handleDrawerClose = useCallback(() => {
+    setSelectedBooking(null)
+  }, [])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -46,24 +49,10 @@ const BookingsPage: NextPage = () => {
       </div>
 
       {/* Booking detail drawer */}
-      {selectedBooking && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setSelectedBooking(null)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.2)',
-              zIndex: 99,
-            }}
-          />
-          <BookingDrawer
-            booking={selectedBooking}
-            onClose={() => setSelectedBooking(null)}
-          />
-        </>
-      )}
+      <BookingDrawer
+        booking={selectedBooking}
+        onClose={handleDrawerClose}
+      />
     </div>
   )
 }
