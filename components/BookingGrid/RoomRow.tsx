@@ -1,8 +1,10 @@
 import React, { useMemo } from "react";
 import { Booking, BookingStatus } from "@/types";
 import { useAppContext } from "@/context/AppContext";
+import styles from "./RoomRow.module.css";
 
 const COLUMN_WIDTH_PX = 48;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 interface RoomRowProps {
   rowId: string;
@@ -22,6 +24,12 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
   cancelled: "#F44336",
 };
 
+function getDayOffset(date: string, startDate: string) {
+  return Math.floor(
+    (new Date(date).getTime() - new Date(startDate).getTime()) / MS_PER_DAY,
+  );
+}
+
 export function RoomRow({
   rowId,
   rowName,
@@ -31,137 +39,97 @@ export function RoomRow({
   totalDays,
   onBookingClick,
 }: RoomRowProps) {
-  console.log("render", rowId);
+  console.log('render', rowId)
+  const { config } = useAppContext();
+  const visibleColumnCount = Math.max(
+    0,
+    Math.min(totalDays - visibleStartIndex, visibleEndIndex - visibleStartIndex + 1),
+  );
+  const clampedVisibleEndIndex = Math.min(visibleEndIndex, totalDays - 1);
 
-  const { hoveredCell, setHoveredCell, config } = useAppContext();
   const getBookingStatus = (status: BookingStatus): string => {
     return STATUS_COLORS[status] ?? "#ccc";
   };
 
+  const visibleDayIndices = useMemo(
+    () =>
+      Array.from({ length: visibleColumnCount }, (_, index) => {
+        return visibleStartIndex + index;
+      }),
+    [visibleColumnCount, visibleStartIndex],
+  );
+
   const visibleBookings = useMemo(() => {
     return bookings
       .filter((b) => {
-        const startDay = Math.floor(
-          (new Date(b.checkIn).getTime() -
-            new Date(config.dateRangeStart).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        const endDay = Math.floor(
-          (new Date(b.checkOut).getTime() -
-            new Date(config.dateRangeStart).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        return endDay >= visibleStartIndex && startDay <= visibleEndIndex;
+        const startDay = getDayOffset(b.checkIn, config.dateRangeStart);
+        const endDay = getDayOffset(b.checkOut, config.dateRangeStart);
+        return endDay >= visibleStartIndex && startDay <= clampedVisibleEndIndex;
       })
       .map((b) => {
-        const startDay = Math.floor(
-          (new Date(b.checkIn).getTime() -
-            new Date(config.dateRangeStart).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        const endDay = Math.floor(
-          (new Date(b.checkOut).getTime() -
-            new Date(config.dateRangeStart).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
+        const startDay = getDayOffset(b.checkIn, config.dateRangeStart);
+        const endDay = getDayOffset(b.checkOut, config.dateRangeStart);
         const color = getBookingStatus(b.status);
         return { booking: b, startDay, endDay, color };
       });
-  }, [bookings, visibleStartIndex, visibleEndIndex, config.dateRangeStart]);
+  }, [
+    bookings,
+    clampedVisibleEndIndex,
+    config.dateRangeStart,
+    visibleStartIndex,
+  ]);
 
-  const isHovered = hoveredCell?.rowId === rowId;
+  const calendarGridTemplate =
+    visibleColumnCount > 0
+      ? `repeat(${visibleColumnCount}, ${COLUMN_WIDTH_PX}px)`
+      : "none";
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        borderBottom: "1px solid #eee",
-        background: isHovered ? "#f0f7ff" : "white",
-      }}
-    >
-      <div
-        style={{
-          width: 140,
-          minWidth: 140,
-          padding: "8px 12px",
-          fontWeight: 500,
-          fontSize: 13,
-          borderRight: "1px solid #eee",
-          background: "white",
-          zIndex: 1,
-        }}
-      >
-        {rowName}
-      </div>
+    <div className={styles.row}>
+      <div className={styles.rowLabel}>{rowName}</div>
 
-      <div style={{ position: "relative", height: 40, flex: 1 }}>
-        {/* Day cell backgrounds */}
-        {Array.from(
-          { length: visibleEndIndex - visibleStartIndex + 1 },
-          (_, i) => {
-            const dayIndex = visibleStartIndex + i;
-            const isCellHovered =
-              hoveredCell?.rowId === rowId &&
-              hoveredCell?.dayIndex === dayIndex;
+      <div className={styles.calendar}>
+        <div
+          className={styles.calendarGrid}
+          style={{
+            gridTemplateColumns: calendarGridTemplate,
+            width: visibleColumnCount * COLUMN_WIDTH_PX,
+          }}
+        >
+          {visibleDayIndices.map((dayIndex, columnIndex) => (
+            <div
+              key={dayIndex}
+              className={styles.dayCell}
+              style={{ gridColumn: columnIndex + 1 }}
+            />
+          ))}
+
+          {visibleBookings.map(({ booking, startDay, endDay, color }) => {
+            const startColumn =
+              Math.max(startDay, visibleStartIndex) - visibleStartIndex + 1;
+            const span =
+              Math.min(endDay, clampedVisibleEndIndex) -
+              Math.max(startDay, visibleStartIndex) +
+              1;
+
+            if (span <= 0) return null;
+
             return (
               <div
-                key={dayIndex}
+                key={booking.id}
+                className={styles.bookingBar}
+                title={`${booking.guestName} (${booking.status})`}
+                onClick={() => onBookingClick(booking)}
                 style={{
-                  position: "absolute",
-                  left: (dayIndex - visibleStartIndex) * COLUMN_WIDTH_PX,
-                  width: COLUMN_WIDTH_PX,
-                  height: 40,
-                  background: isCellHovered ? "#e3f2fd" : "transparent",
-                  borderRight: "1px solid #f0f0f0",
-                  cursor: "default",
+                  gridColumn: `${startColumn} / span ${span}`,
+                  background: color,
                 }}
-                onMouseEnter={() => setHoveredCell({ rowId, dayIndex })}
-                onMouseLeave={() => setHoveredCell(null)}
-              />
+              >
+                {booking.guestName}
+              </div>
             );
-          },
-        )}
-
-        {/* Booking bars */}
-        {visibleBookings.map(({ booking, startDay, endDay, color }) => {
-          const left = Math.max(
-            0,
-            (startDay - visibleStartIndex) * COLUMN_WIDTH_PX,
-          );
-          const width =
-            (Math.min(endDay, visibleEndIndex) -
-              Math.max(startDay, visibleStartIndex) +
-              1) *
-            COLUMN_WIDTH_PX;
-          return (
-            <div
-              key={booking.id}
-              title={`${booking.guestName} (${booking.status})`}
-              onClick={() => onBookingClick(booking)}
-              style={{
-                position: "absolute",
-                left,
-                width: width - 2,
-                height: 28,
-                top: 6,
-                background: color,
-                borderRadius: 4,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                paddingLeft: 6,
-                fontSize: 11,
-                color: "white",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                zIndex: 2,
-              }}
-            >
-              {booking.guestName}
-            </div>
-          );
-        })}
+          })}
+        </div>
       </div>
     </div>
   );

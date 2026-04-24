@@ -1,0 +1,64 @@
+.row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  min-height: 40px;
+  border-bottom: 1px solid #eee;
+  background: white;
+}
+
+.row:hover {
+  background: #f0f7ff;
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-weight: 500;
+  font-size: 13px;
+  border-right: 1px solid #eee;
+  background: white;
+  z-index: 1;
+}
+
+.calendar {
+  overflow: hidden;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-rows: 40px;
+  align-items: stretch;
+  min-height: 40px;
+}
+
+.dayCell {
+  grid-row: 1;
+  height: 100%;
+  border-right: 1px solid #f0f0f0;
+  cursor: default;
+  z-index: 1;
+}
+
+.dayCell:hover {
+  background: #e3f2fd;
+}
+
+.bookingBar {
+  grid-row: 1;
+  align-self: center;
+  height: 28px;
+  margin: 0 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 11px;
+  color: white;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+  z-index: 2;
+}
