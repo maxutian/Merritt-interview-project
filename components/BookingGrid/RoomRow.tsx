@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import { Booking, BookingStatus } from "@/types";
 import { useAppContext } from "@/context/AppContext";
 import styles from "./RoomRow.module.css";
@@ -27,7 +27,7 @@ function getDayOffset(date: string, startDate: string) {
   );
 }
 
-export function RoomRow({
+export const RoomRow = memo(function RoomRow({
   rowId,
   rowName,
   bookings,
@@ -120,4 +120,4 @@ export function RoomRow({
       </div>
     </div>
   );
-}
+});

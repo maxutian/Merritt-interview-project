@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo, useMemo } from 'react'
 import { Booking, RoomUnit } from '@/types'
 import { useAppContext } from '@/context/AppContext'
 import { RoomRow } from './RoomRow'
@@ -19,9 +19,28 @@ function getDayLabels(startDate: string, totalDays: number): string[] {
   })
 }
 
-export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGridProps) {
+export const BookingGrid = memo(function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGridProps) {
   const { config } = useAppContext()
-  const dayLabels = getDayLabels(config.dateRangeStart, TOTAL_DAYS)
+  const dayLabels = useMemo(
+    () => getDayLabels(config.dateRangeStart, TOTAL_DAYS),
+    [config.dateRangeStart],
+  )
+  const bookingsByRoom = useMemo(() => {
+    const groupedBookings = new Map<string, Booking[]>()
+
+    bookings.forEach((booking) => {
+      const roomBookings = groupedBookings.get(booking.roomUnit.roomId)
+
+      if (roomBookings) {
+        roomBookings.push(booking)
+        return
+      }
+
+      groupedBookings.set(booking.roomUnit.roomId, [booking])
+    })
+
+    return groupedBookings
+  }, [bookings])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -65,9 +84,7 @@ export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGrid
       >
         <div style={{ minWidth: TOTAL_DAYS * config.columnWidthPx + 140 }}>
           {roomUnits.map(room => {
-            const roomBookings = bookings.filter(
-              b => b.roomUnit.roomId === room.id
-            )
+            const roomBookings = bookingsByRoom.get(room.id) ?? []
             return (
               <RoomRow
                 key={room.id}
@@ -83,4 +100,4 @@ export function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGrid
       </div>
     </div>
   )
-}
+})
