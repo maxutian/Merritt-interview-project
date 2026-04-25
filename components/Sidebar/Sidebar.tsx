@@ -1,7 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useMessagesContext } from '@/context/MessagesContext'
+import { useTickets } from '@/hooks/useTickets'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Bookings' },
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const router = useRouter()
-  const { unreadCount } = useMessagesContext()
+  const { unreadCount } = useTickets()
 
   return (
     <nav style={{

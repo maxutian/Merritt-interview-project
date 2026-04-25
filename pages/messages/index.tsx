@@ -1,36 +1,53 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import type { GetServerSideProps, NextPage } from 'next'
 import { useRouter } from 'next/router'
-import useSWR from 'swr'
 import { Ticket } from '@/types'
-import { useMessagesContext } from '@/context/MessagesContext'
+import { useTickets } from '@/hooks/useTickets'
 
 interface MessagesPageProps {
   initialTicketId: string | null
 }
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
-
 const MessagesPage: NextPage<MessagesPageProps> = ({ initialTicketId }) => {
   const router = useRouter()
-  const { activeTicketId, setActiveTicketId, setUnreadCount } = useMessagesContext()
-  const { data: tickets } = useSWR<Ticket[]>('/api/tickets', fetcher)
-
-  // Sync unread count into context
-  useEffect(() => {
-    if (tickets) {
-      setUnreadCount(tickets.filter(t => t.unread).length)
-    }
-  }, [tickets, setUnreadCount])
-
-  // Use ticketId from URL or prop
-  const currentTicketId = (router.query.ticketId as string) ?? initialTicketId ?? activeTicketId
+  const { tickets, markTicketAsRead } = useTickets()
+  const lastAutoMarkedTicketIdRef = useRef<string | null>(null)
+  const ticketIdFromQuery = router.query.ticketId
+  const currentTicketId =
+    (typeof ticketIdFromQuery === 'string' ? ticketIdFromQuery : null) ??
+    initialTicketId
 
   const handleTicketClick = (ticket: Ticket) => {
-    router.push(`/messages?ticketId=${ticket.id}&houseId=${ticket.houseId}`)
+    lastAutoMarkedTicketIdRef.current = ticket.id
+
+    void router.push(
+      {
+        pathname: '/messages',
+        query: { ticketId: ticket.id },
+      },
+      undefined,
+      { shallow: true }
+    )
+
+    if (ticket.unread) {
+      void markTicketAsRead(ticket.id)
+    }
   }
 
-  const activeTicket = tickets?.find(t => t.id === currentTicketId)
+  const activeTicket = tickets.find(ticket => ticket.id === currentTicketId)
+
+  useEffect(() => {
+    if (!activeTicket?.unread) {
+      return
+    }
+
+    if (lastAutoMarkedTicketIdRef.current === activeTicket.id) {
+      return
+    }
+
+    lastAutoMarkedTicketIdRef.current = activeTicket.id
+    void markTicketAsRead(activeTicket.id)
+  }, [activeTicket, markTicketAsRead])
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
@@ -46,7 +63,7 @@ const MessagesPage: NextPage<MessagesPageProps> = ({ initialTicketId }) => {
           Messages
         </div>
 
-        {tickets?.map(ticket => {
+        {tickets.map(ticket => {
           const isActive = ticket.id === currentTicketId
           return (
             <div
@@ -126,7 +143,8 @@ const MessagesPage: NextPage<MessagesPageProps> = ({ initialTicketId }) => {
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const ticketId = (context.query.ticketId as string) ?? null
+  const rawTicketId = context.query.ticketId
+  const ticketId = typeof rawTicketId === 'string' ? rawTicketId : null
   return {
     props: {
       initialTicketId: ticketId,
