@@ -1,9 +1,19 @@
 import React, { memo, useMemo } from 'react'
-import { Booking, RoomUnit } from '@/types'
+import { Booking, BookingStatus, RoomUnit } from '@/types'
 import { useAppContext } from '@/context/AppContext'
 import { RoomRow } from './RoomRow'
+import type { RenderableBooking } from './RoomRow'
 
 const TOTAL_DAYS = 30
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+const STATUS_COLORS: Record<BookingStatus, string> = {
+  confirmed: '#4CAF50',
+  pending: '#FF9800',
+  in_house: '#2196F3',
+  checked_out: '#9E9E9E',
+  cancelled: '#F44336',
+}
 
 interface BookingGridProps {
   roomUnits: RoomUnit[]
@@ -19,28 +29,55 @@ function getDayLabels(startDate: string, totalDays: number): string[] {
   })
 }
 
+function getDayOffset(date: string, rangeStartTime: number) {
+  return Math.floor((new Date(date).getTime() - rangeStartTime) / MS_PER_DAY)
+}
+
 export const BookingGrid = memo(function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGridProps) {
   const { config } = useAppContext()
   const dayLabels = useMemo(
     () => getDayLabels(config.dateRangeStart, TOTAL_DAYS),
     [config.dateRangeStart],
   )
-  const bookingsByRoom = useMemo(() => {
-    const groupedBookings = new Map<string, Booking[]>()
+  const renderableBookingsByRoom = useMemo(() => {
+    const groupedBookings = new Map<string, RenderableBooking[]>()
+    const rangeStartTime = new Date(config.dateRangeStart).getTime()
+    const lastDayIndex = TOTAL_DAYS - 1
 
     bookings.forEach((booking) => {
-      const roomBookings = groupedBookings.get(booking.roomUnit.roomId)
+      const startDay = getDayOffset(booking.checkIn, rangeStartTime)
+      const endDay = getDayOffset(booking.checkOut, rangeStartTime)
 
-      if (roomBookings) {
-        roomBookings.push(booking)
+      if (endDay < 0 || startDay > lastDayIndex) {
         return
       }
 
-      groupedBookings.set(booking.roomUnit.roomId, [booking])
+      const visibleStartDay = Math.max(startDay, 0)
+      const visibleEndDay = Math.min(endDay, lastDayIndex)
+      const span = visibleEndDay - visibleStartDay + 1
+
+      if (span <= 0) {
+        return
+      }
+
+      const renderableBooking: RenderableBooking = {
+        booking,
+        startColumn: visibleStartDay + 1,
+        span,
+        color: STATUS_COLORS[booking.status] ?? '#ccc',
+      }
+      const roomBookings = groupedBookings.get(booking.roomUnit.roomId)
+
+      if (roomBookings) {
+        roomBookings.push(renderableBooking)
+        return
+      }
+
+      groupedBookings.set(booking.roomUnit.roomId, [renderableBooking])
     })
 
     return groupedBookings
-  }, [bookings])
+  }, [bookings, config.dateRangeStart])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -84,13 +121,13 @@ export const BookingGrid = memo(function BookingGrid({ roomUnits, bookings, onBo
       >
         <div style={{ minWidth: TOTAL_DAYS * config.columnWidthPx + 140 }}>
           {roomUnits.map(room => {
-            const roomBookings = bookingsByRoom.get(room.id) ?? []
+            const roomBookings = renderableBookingsByRoom.get(room.id) ?? []
             return (
               <RoomRow
                 key={room.id}
                 rowId={room.id}
                 rowName={room.name}
-                bookings={roomBookings}
+                renderableBookings={roomBookings}
                 totalDays={TOTAL_DAYS}
                 onBookingClick={onBookingClick}
               />
