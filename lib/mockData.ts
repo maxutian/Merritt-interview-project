@@ -1,4 +1,5 @@
 import { Booking, BookingDetail, RoomUnit, Ticket } from '@/types'
+import { addDaysToLocalDate, formatLocalDate } from '@/lib/date'
 
 export const ROOM_UNITS: RoomUnit[] = Array.from({ length: 30 }, (_, i) => ({
   id: `room-${i + 1}`,
@@ -8,11 +9,10 @@ export const ROOM_UNITS: RoomUnit[] = Array.from({ length: 30 }, (_, i) => ({
 }))
 
 const STATUSES = ['confirmed', 'pending', 'in_house', 'checked_out'] as const
+const bookingBaseDate = new Date()
 
 function dateStr(daysFromNow: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + daysFromNow)
-  return d.toISOString().split('T')[0]
+  return formatLocalDate(addDaysToLocalDate(bookingBaseDate, daysFromNow))
 }
 
 export const BOOKINGS: Booking[] = [

@@ -1,11 +1,11 @@
 import React, { memo, useMemo } from 'react'
 import { Booking, BookingStatus, RoomUnit } from '@/types'
 import { useAppContext } from '@/context/AppContext'
+import { formatMonthDayFromDateKey, getDateKeyDayOffset, shiftDateKey } from '@/lib/date'
 import { RoomRow } from './RoomRow'
 import type { RenderableBooking } from './RoomRow'
 
 const TOTAL_DAYS = 30
-const MS_PER_DAY = 1000 * 60 * 60 * 24
 
 const STATUS_COLORS: Record<BookingStatus, string> = {
   confirmed: '#4CAF50',
@@ -22,15 +22,9 @@ interface BookingGridProps {
 }
 
 function getDayLabels(startDate: string, totalDays: number): string[] {
-  return Array.from({ length: totalDays }, (_, i) => {
-    const d = new Date(startDate)
-    d.setDate(d.getDate() + i)
-    return `${d.getMonth() + 1}/${d.getDate()}`
-  })
-}
-
-function getDayOffset(date: string, rangeStartTime: number) {
-  return Math.floor((new Date(date).getTime() - rangeStartTime) / MS_PER_DAY)
+  return Array.from({ length: totalDays }, (_, index) =>
+    formatMonthDayFromDateKey(shiftDateKey(startDate, index))
+  )
 }
 
 export const BookingGrid = memo(function BookingGrid({ roomUnits, bookings, onBookingClick }: BookingGridProps) {
@@ -41,12 +35,11 @@ export const BookingGrid = memo(function BookingGrid({ roomUnits, bookings, onBo
   )
   const renderableBookingsByRoom = useMemo(() => {
     const groupedBookings = new Map<string, RenderableBooking[]>()
-    const rangeStartTime = new Date(config.dateRangeStart).getTime()
     const lastDayIndex = TOTAL_DAYS - 1
 
     bookings.forEach((booking) => {
-      const startDay = getDayOffset(booking.checkIn, rangeStartTime)
-      const endDay = getDayOffset(booking.checkOut, rangeStartTime)
+      const startDay = getDateKeyDayOffset(booking.checkIn, config.dateRangeStart)
+      const endDay = getDateKeyDayOffset(booking.checkOut, config.dateRangeStart)
 
       if (endDay < 0 || startDay > lastDayIndex) {
         return

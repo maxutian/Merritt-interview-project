@@ -1,17 +1,16 @@
 import React, { createContext, useContext, ReactNode } from 'react'
 import { AppConfig } from '@/types'
+import { addDaysToLocalDate, formatLocalDate } from '@/lib/date'
 
 interface AppContextValue {
   config: AppConfig
 }
 
+const today = new Date()
+
 const defaultConfig: AppConfig = {
-  dateRangeStart: new Date().toISOString().split('T')[0],
-  dateRangeEnd: (() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 30)
-    return d.toISOString().split('T')[0]
-  })(),
+  dateRangeStart: formatLocalDate(today),
+  dateRangeEnd: formatLocalDate(addDaysToLocalDate(today, 30)),
   columnWidthPx: 48,
   bookingHeaderBackground: "#e8f4fc"
 }
