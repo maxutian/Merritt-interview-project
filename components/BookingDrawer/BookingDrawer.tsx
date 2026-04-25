@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import useSWR from 'swr'
-import { Booking, BookingDetail } from '@/types'
+import { Booking, BookingDetail, BookingStatus } from '@/types'
 
 interface BookingDrawerProps {
   booking: Booking | null
@@ -9,7 +9,7 @@ interface BookingDrawerProps {
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: 'Confirmed',
   pending: 'Pending',
   in_house: 'In House',

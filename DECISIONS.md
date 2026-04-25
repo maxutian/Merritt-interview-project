@@ -13,6 +13,7 @@
 - 把 `RoomRow` 重写成 CSS Grid 版本，并用 CSS `:hover` 替代原本依赖共享状态的 hover 视觉控制。同时，对 booking grid 做了局部性能优化：为 `BookingGrid` 和 `RoomRow` 加 `memo`、把 bookings 预先按房间分组，并把 booking 的日期偏移和跨度计算前置到 `BookingGrid`，避免打开/关闭 drawer 时整块 grid 跟着重复渲染，也减少了每个 `RoomRow` 内部的重复日期换算。
 - 移除了不完整的 `useVisibleRange` 逻辑，改成直接渲染完整的 30 天表头和房态网格，并统一使用 `columnWidthPx` 作为列宽来源。
 - 重构了 booking drawer：让 drawer 自己管理遮罩、面板和关闭动画期间的展示内容，页面层只保留 `selectedBooking` 和关闭入口。
+- 收紧了 booking drawer 内部的状态标签映射类型，直接让 `BookingStatus` 驱动 label 字典，避免后续状态值变更时静默漏改。
 - 收敛了消息页状态来源：抽出共享的 `useTickets` hook 统一管理 `tickets` 和 `unreadCount`，sidebar 与消息页共用同一份 SWR cache，并新增 `PATCH /api/tickets/[id]` 配合 optimistic update，在打开工单时立即标记已读。
 - 统一了 booking 日期字符串的语义：不再用 `toISOString().split('T')[0]` 生成默认日期，也不再直接用 `new Date('YYYY-MM-DD')` 做偏移计算，改成共享的 date-only 工具按本地日历日生成、按日历日差值计算，避免非 UTC 时区下出现日期偏移。
 
@@ -24,7 +25,6 @@
 
 ## 如果有更多时间
 
-- 用 React Profiler 再验证一次当前 booking grid 的热点，确认后续是否还需要更细的 memoization 或更深层的数据预处理。
 - 把 booking 页面之外的时间展示也统一起来，特别是消息模块里带时区的时间字段与 date-only 字符串的边界。
 - 补UT，优先覆盖 booking span、drawer 开关行为和消息页状态同步。
 - 完善Accessibility，例如更合适的交互元素、键盘导航和抽屉焦点管理。
